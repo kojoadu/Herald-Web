@@ -24,7 +24,7 @@ streamlit run app.py
 
 The portal never needs a Supabase database password or `service_role` key. Authorization is performed by the signed-in user's JWT and database Row Level Security.
 
-Herald installers are public GitHub Release assets from the separate public `kojoadu/Herald-Releases` repository. The Herald source repository is private, so it cannot provide anonymous Streamlit download links. Configure `HERALD_GITHUB_REPOSITORY`, or optionally override `HERALD_DOWNLOAD_URL` and `HERALD_RELEASES_URL`; no GitHub token is required by Herald-Web.
+The configured installer release is `kojoadu/Herald-Web` tag `Presentation`, whose installer asset is `Herald-win-Setup.exe`. Configure `HERALD_GITHUB_REPOSITORY`, `HERALD_GITHUB_RELEASE_TAG`, or optionally override `HERALD_DOWNLOAD_URL` and `HERALD_RELEASES_URL`; no GitHub token is used by Herald-Web.
 
 Register the local and deployed Streamlit URLs in Supabase Auth. Configure the Google and Microsoft providers in Supabase, and never commit `.streamlit/secrets.toml`.
 

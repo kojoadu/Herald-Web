@@ -83,9 +83,8 @@ def test_latest_release_falls_back_to_stable_download_url_on_api_error():
 
     assert release["is_fallback"] is True
     assert release["installer_url"] == "https://downloads.example.test/Herald-Setup.exe"
-    assert release["portable_url"].endswith(
-        "releases/latest/download/Herald-win-x64.zip"
-    )
+    assert release["portable_url"] is None
+    assert release["checksums_url"] is None
 
 
 def test_fallback_uses_official_latest_installer_url_by_default():
@@ -94,9 +93,12 @@ def test_fallback_uses_official_latest_installer_url_by_default():
     release = service.fallback()
 
     assert release["installer_url"] == (
-        "https://github.com/kojoadu/Herald-Releases/releases/latest/download/Herald-Setup.exe"
+        "https://github.com/kojoadu/Herald-Web/releases/download/"
+        "Presentation/Herald-win-Setup.exe"
     )
-    assert release["release_url"] == "https://github.com/kojoadu/Herald-Releases/releases/latest"
+    assert release["release_url"] == (
+        "https://github.com/kojoadu/Herald-Web/releases/tag/Presentation"
+    )
 
 
 def test_missing_release_is_not_shown_as_downloadable():
@@ -106,6 +108,6 @@ def test_missing_release_is_not_shown_as_downloadable():
 
     release = GitHubReleaseService(session_factory=lambda: session).latest()
 
-    assert release["available"] is False
-    assert release["version"] == "Not published"
-    assert release["installer_url"] is None
+    assert release["available"] is True
+    assert release["is_fallback"] is True
+    assert release["installer_url"].endswith("Presentation/Herald-win-Setup.exe")

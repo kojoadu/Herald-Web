@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import os
 from typing import Any, Mapping
+from urllib.parse import quote
 
 import requests
 
 
-DEFAULT_REPOSITORY = "kojoadu/Herald-Releases"
+DEFAULT_REPOSITORY = "kojoadu/Herald-Web"
+DEFAULT_RELEASE_TAG = "Presentation"
 
 
 class GitHubReleaseError(RuntimeError):
@@ -20,6 +22,7 @@ class GitHubReleaseService:
         *,
         download_url: str | None = None,
         releases_url: str | None = None,
+        release_tag: str = DEFAULT_RELEASE_TAG,
         session_factory=requests.Session,
         timeout: float = 15,
     ):
@@ -27,12 +30,17 @@ class GitHubReleaseService:
         if len(parts) != 2 or not all(parts):
             raise ValueError("HERALD_GITHUB_REPOSITORY must use owner/repository format.")
         self.repository = repository
+        self.release_tag = release_tag.strip() or DEFAULT_RELEASE_TAG
         self.timeout = timeout
         self.http = session_factory()
-        self.releases_url = releases_url or f"https://github.com/{repository}/releases/latest"
+        encoded_tag = quote(self.release_tag, safe="")
+        self.releases_url = releases_url or (
+            f"https://github.com/{repository}/releases/tag/{encoded_tag}"
+        )
         self._download_override = download_url
         self.download_url = download_url or (
-            f"https://github.com/{repository}/releases/latest/download/Herald-Setup.exe"
+            f"https://github.com/{repository}/releases/download/{encoded_tag}/"
+            "Herald-win-Setup.exe"
         )
 
     @classmethod
@@ -52,10 +60,13 @@ class GitHubReleaseService:
             value("HERALD_GITHUB_REPOSITORY", DEFAULT_REPOSITORY) or DEFAULT_REPOSITORY,
             download_url=value("HERALD_DOWNLOAD_URL"),
             releases_url=value("HERALD_RELEASES_URL"),
+            release_tag=value("HERALD_GITHUB_RELEASE_TAG", DEFAULT_RELEASE_TAG)
+            or DEFAULT_RELEASE_TAG,
         )
 
     def latest(self) -> dict[str, Any]:
-        url = f"https://api.github.com/repos/{self.repository}/releases/latest"
+        tag = quote(self.release_tag, safe="")
+        url = f"https://api.github.com/repos/{self.repository}/releases/tags/{tag}"
         try:
             response = self.http.get(
                 url,
@@ -71,30 +82,22 @@ class GitHubReleaseService:
             if not isinstance(payload, dict):
                 raise GitHubReleaseError("GitHub returned an invalid release response.")
             return self._parse_release(payload)
-        except requests.HTTPError as exc:
-            if getattr(exc.response, "status_code", None) == 404 and not self._download_override:
-                return self.unavailable()
+        except requests.HTTPError:
             return self.fallback()
         except (requests.RequestException, ValueError, GitHubReleaseError):
             return self.fallback()
 
     def fallback(self) -> dict[str, Any]:
         return {
-            "tag": "Latest",
-            "version": "Latest",
+            "tag": self.release_tag,
+            "version": self.release_tag,
             "name": "Herald for Windows",
             "release_notes": "",
             "published_at": None,
             "release_url": self.releases_url,
             "installer_url": self.download_url,
-            "portable_url": (
-                f"https://github.com/{self.repository}/releases/latest/download/"
-                "Herald-win-x64.zip"
-            ),
-            "checksums_url": (
-                f"https://github.com/{self.repository}/releases/latest/download/"
-                "SHA256SUMS.txt"
-            ),
+            "portable_url": None,
+            "checksums_url": None,
             "checksums": {},
             "is_fallback": True,
             "available": True,
@@ -125,7 +128,11 @@ class GitHubReleaseService:
             for asset in assets
             if isinstance(asset, dict) and asset.get("browser_download_url")
         }
-        installer_url = by_name.get("herald-setup.exe") or self.download_url
+        installer_url = (
+            by_name.get("herald-win-setup.exe")
+            or by_name.get("herald-setup.exe")
+            or self.download_url
+        )
         portable_url = by_name.get("herald-win-x64.zip")
         checksums_url = by_name.get("sha256sums.txt")
         if not installer_url:
