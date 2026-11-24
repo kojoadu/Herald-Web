@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from services.releases import ReleaseService
-from services.supabase import SupabaseError
+from services.github_releases import GitHubReleaseService
 from ui import configured_client, finish_oauth
 
 
@@ -31,20 +30,18 @@ with left:
     st.write("• Your uploader and moderator permissions remain database-enforced")
 with right:
     st.subheader("Latest Windows release")
-    if client:
-        try:
-            release = ReleaseService(client).latest()
-            if release:
-                st.metric("Version", release["version"])
-                if release.get("published_at"):
-                    st.caption(f"Published {release['published_at']}")
-                st.page_link("pages/4_Download.py", label="View release download", icon=":material/download:")
-            else:
-                st.info("No active release has been published yet.")
-        except SupabaseError as exc:
-            st.error(str(exc))
+    try:
+        secrets = dict(st.secrets)
+    except Exception:
+        secrets = {}
+    release = GitHubReleaseService.from_environment(secrets=secrets).latest()
+    st.metric("Version", release["version"])
+    if release["available"]:
+        if release.get("published_at"):
+            st.caption(f"Published {release['published_at']}")
+        st.page_link("pages/4_Download.py", label="View release download", icon=":material/download:")
     else:
-        st.info("Configure Supabase to check releases.")
+        st.caption("The first public release has not been published yet.")
 
 st.divider()
 st.caption(
