@@ -4,7 +4,7 @@ Standalone Streamlit website for the Herald song pool. It is intentionally separ
 
 ## Features
 
-- Email/password, Google, and Microsoft sign-in through Supabase Auth
+- Email/password account creation and sign-in, plus Google and Microsoft sign-in through Supabase Auth
 - Dynamic church onboarding that reuses an existing canonical organization and hierarchy
 - Authenticated song search, upload, preview, and download
 - Latest Herald Windows release download

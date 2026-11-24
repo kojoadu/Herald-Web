@@ -22,17 +22,40 @@ class AuthService:
         self.client.session = session
         return session
 
-    def sign_up(self, email: str, password: str, display_name: str, redirect_url: str) -> dict:
-        return self.client.auth(
+    def sign_up(
+        self,
+        email: str,
+        password: str,
+        display_name: str,
+        redirect_url: str = "",
+    ) -> AuthSession | None:
+        email = email.strip()
+        display_name = display_name.strip()
+        if not display_name:
+            raise ValueError("Enter a display name.")
+        if not email or "@" not in email:
+            raise ValueError("Enter a valid email address.")
+        if not password:
+            raise ValueError("Enter a password.")
+
+        redirect_url = redirect_url.strip()
+        payload = self.client.auth(
             "POST",
             "signup",
             {
-                "email": email.strip(),
+                "email": email,
                 "password": password,
-                "data": {"display_name": display_name.strip()},
-                "redirect_to": redirect_url,
+                "data": {"display_name": display_name},
             },
+            params={"redirect_to": redirect_url} if redirect_url else None,
         )
+        session_payload = payload.get("session") if isinstance(payload, dict) else None
+        if isinstance(session_payload, dict):
+            payload = session_payload
+        if isinstance(payload, dict) and payload.get("access_token") and payload.get("refresh_token"):
+            self.client.session = AuthSession.from_payload(payload)
+            return self.client.session
+        return None
 
     def oauth_url(self, provider: str, redirect_url: str) -> tuple[str, str]:
         if provider not in {"google", "azure"}:

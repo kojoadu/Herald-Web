@@ -47,13 +47,29 @@ if client.session is None:
             name = st.text_input("Display name")
             email = st.text_input("Email", key="signup_email")
             password = st.text_input("Password", type="password", key="signup_password")
-            redirect_url = st.text_input("Confirmation redirect URL", key="signup_redirect")
+            confirm_password = st.text_input(
+                "Confirm password",
+                type="password",
+                key="signup_confirm_password",
+            )
+            redirect_url = st.text_input(
+                "Confirmation redirect URL (optional)",
+                key="signup_redirect",
+            )
             submitted = st.form_submit_button("Create account")
         if submitted:
+            if password != confirm_password:
+                st.error("Passwords do not match.")
+                st.stop()
             try:
-                AuthService(client).sign_up(email, password, name, redirect_url)
-                st.success("Check your email to confirm the account, then sign in.")
-            except SupabaseError as exc:
+                session = AuthService(client).sign_up(email, password, name, redirect_url)
+                if session:
+                    save_session(client)
+                    st.success("Account created. You are now signed in.")
+                    st.rerun()
+                else:
+                    st.success("Account created. Check your email to confirm it, then sign in.")
+            except (SupabaseError, ValueError) as exc:
                 show_error(exc)
     st.stop()
 
